@@ -299,3 +299,18 @@ def generate_non_local_graph(args, feat_trans, H, A, num_edge, num_nodes):
     #     edge_value = deg_inv_sqrt[deg_col] * edge_value
     #     g = (edge_index, edge_value)
     #     A[-1] = g
+
+
+def print_cuda_info():
+    if torch.cuda.is_available():
+        print("CUDA is available!")
+        print(f"Number of CUDA devices: {torch.cuda.device_count()}")
+        for i in range(torch.cuda.device_count()):
+            props = torch.cuda.get_device_properties(i)
+            total_memory = props.total_memory / 1024 ** 2  # 转换为 MB
+            print(f"Device {i}: {torch.cuda.get_device_name(i)}")
+            print(f"  Total Memory: {total_memory:.2f} MB")
+            print(f"  Memory Allocated: {torch.cuda.memory_allocated(i) / 1024 ** 2:.2f} MB")
+            print(f"  Memory Cached: {torch.cuda.memory_reserved(i) / 1024 ** 2:.2f} MB")
+    else:
+        print("CUDA is not available.")

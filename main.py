@@ -5,10 +5,14 @@ from model_gtn import GTN
 from model_fastgtn import FastGTNs
 import pickle
 import argparse
-from torch_geometric.utils import f1_score, add_self_loops
+from torch_geometric.utils import add_self_loops
 from sklearn.metrics import f1_score as sk_f1_score
-from utils import init_seed, _norm
+from utils import init_seed, _norm,f1_score,print_cuda_info
 import copy
+# from sklearn.metrics import f1_score
+# from torch_geometric.utils import add_self_loops
+
+# 你的其他代码
 
 if __name__ == '__main__':
     init_seed(seed=777)
@@ -63,22 +67,37 @@ if __name__ == '__main__':
         with open('../data/%s/ppi_tvt_nids.pkl' % args.dataset, 'rb') as fp:
             nids = pickle.load(fp)
 
+
+    print('Dataset:', node_features,node_features.shape)
+    print('Edges:', edges)
+    print('edge',len(edges))
+    print('Labels:', type(labels))
+    print(labels[0])
+    print('len(labels):', len(labels))
+    # print('labels[0]:', labels[0],len(labels[0]))
+    # print('labels[1]:', labels[1],len(labels[1]))
+    # print('labels[2]:', labels[2],len(labels[2]))
+     
     num_nodes = edges[0].shape[0]
     args.num_nodes = num_nodes
     # build adjacency matrices for each edge type
+    # print_cuda_info()
     A = []
     for i,edge in enumerate(edges):
         edge_tmp = torch.from_numpy(np.vstack((edge.nonzero()[1], edge.nonzero()[0]))).type(torch.cuda.LongTensor)
         value_tmp = torch.ones(edge_tmp.shape[1]).type(torch.cuda.FloatTensor)
         # normalize each adjacency matrix
         if args.model == 'FastGTN' and args.dataset != 'AIRPORT':
-            edge_tmp, value_tmp = add_self_loops(edge_tmp, edge_attr=value_tmp, fill_value=1e-20, num_nodes=num_nodes)
+            edge_tmp, value_tmp = add_self_loops(edge_tmp, edge_attr=value_tmp, fill_value=1e-20, num_nodes=num_nodes)#添加自环
             deg_inv_sqrt, deg_row, deg_col = _norm(edge_tmp.detach(), num_nodes, value_tmp.detach())
-            value_tmp = deg_inv_sqrt[deg_row] * value_tmp
+            value_tmp = deg_inv_sqrt[deg_row] * value_tmp#归一化
         A.append((edge_tmp,value_tmp))
-    edge_tmp = torch.stack((torch.arange(0,num_nodes),torch.arange(0,num_nodes))).type(torch.cuda.LongTensor)
+    edge_tmp = torch.stack((torch.arange(0,num_nodes),torch.arange(0,num_nodes))).type(torch.cuda.LongTensor)#全点的自环
     value_tmp = torch.ones(num_nodes).type(torch.cuda.FloatTensor)
     A.append((edge_tmp,value_tmp))
+    # print A 的形状
+    print('A shape:', len(A))
+    print('A:0:', A)
     
     
     num_edge_type = len(A)
@@ -94,6 +113,7 @@ if __name__ == '__main__':
         is_ppi = True
     else:
         train_node = torch.from_numpy(np.array(labels[0])[:,0]).type(torch.cuda.LongTensor)
+        # print('train_node:', train_node)
         train_target = torch.from_numpy(np.array(labels[0])[:,1]).type(torch.cuda.LongTensor)
         valid_node = torch.from_numpy(np.array(labels[1])[:,0]).type(torch.cuda.LongTensor)
         valid_target = torch.from_numpy(np.array(labels[1])[:,1]).type(torch.cuda.LongTensor)
@@ -104,9 +124,12 @@ if __name__ == '__main__':
     final_f1, final_micro_f1 = [], []
     tmp = None
     runs = args.runs
+    print('Pre:',args.pre_train)
     if args.pre_train:
         runs += 1
         pre_trained_fastGTNs = None
+    
+    
     for l in range(runs):
         # initialize a model
         if args.model == 'GTN':
@@ -137,6 +160,7 @@ if __name__ == '__main__':
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
         model.cuda()
+        # print_cuda_info()
         if args.dataset == 'PPI':
             loss = nn.BCELoss()
         else:
@@ -154,10 +178,15 @@ if __name__ == '__main__':
             # print('Epoch ',i)
             model.zero_grad()
             model.train()
+            # print("train")
+            # print_cuda_info()
+            
             if args.model == 'FastGTN':
                 loss,y_train,W = model(A, node_features, train_node, train_target, epoch=i)
             else:
                 loss,y_train,W = model(A, node_features, train_node, train_target)
+            # torch.cuda.empty_cache()
+            # print_cuda_info()
             if args.dataset == 'PPI':
                 y_train = (y_train > 0).detach().float().cpu()
                 train_f1 = 0.0
@@ -167,7 +196,6 @@ if __name__ == '__main__':
                 sk_train_f1 = sk_f1_score(train_target.detach().cpu(), np.argmax(y_train.detach().cpu(), axis=1), average='micro')
             # print(W)
             # print('Train - Loss: {}, Macro_F1: {}, Micro_F1: {}'.format(loss.detach().cpu().numpy(), train_f1, sk_train_f1))
-            
             loss.backward()
             optimizer.step()
             model.eval()
@@ -208,6 +236,13 @@ if __name__ == '__main__':
                 best_micro_train_f1 = sk_train_f1
                 best_micro_val_f1 = sk_val_f1
                 best_micro_test_f1 = sk_test_f1
+
+            
+            # print('Run {}'.format(l),"Epoch: ",i)
+            # print('--------------------Best Result-------------------------')
+            # print('Train - Loss: {:.4f}, Macro_F1: {:.4f}, Micro_F1: {:.4f}'.format(best_test_loss, best_train_f1, best_micro_train_f1))
+            # print('Valid - Loss: {:.4f}, Macro_F1: {:.4f}, Micro_F1: {:.4f}'.format(best_val_loss, best_val_f1, best_micro_val_f1))
+            # print('Test - Loss: {:.4f}, Macro_F1: {:.4f}, Micro_F1: {:.4f}'.format(best_test_loss, best_test_f1, best_micro_test_f1))
         if l == 0 and args.pre_train:
             continue
         print('Run {}'.format(l))

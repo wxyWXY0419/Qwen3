@@ -1,0 +1,10 @@
+Flow source_address destination_address source_port destination_port protocol source_id destination_id tx_packets rx_packets duration throughput mean_delay mean_jitter packet_loss_rate 异常情况
+Node-device CPU占用率 内存占用率 类型 ip地址 异常情况
+Sender 最大可发送流数 可发送视频
+Receiver 最大可接受流数 已接收视频
+Camera 视频分辨率 发送帧率
+User frame_rate throughput mean_delay mean_jitter packet_loss_rate
+Edge-Server link_num in_rate out_rate
+Center-Server link_num in_rate out_rate
+Send-queue 发送流数 发送的视频队列
+Receive-queue 接收流数 接收的视频队列
