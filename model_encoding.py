@@ -56,7 +56,7 @@ from gcn import GCNConv
 import torch_sparse
 from torch_geometric.utils import softmax
 from utils import _norm, generate_non_local_graph
-from model_GTN import FastGTNs
+#from model_gtn import FastGTNs
 
 from torch_geometric.nn import GCNConv as GCNNomal
 

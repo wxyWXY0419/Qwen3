@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
 
     #Create Real Graph
-    rg = Real_Graph(g,data)  =#由基础知识图谱和采集到的数据构建的真实知识图谱
+    rg = Real_Graph(g,data)  #由基础知识图谱和采集到的数据构建的真实知识图谱
     rg.init_RG()
 
     ################## 可以打印出来看看数据结构 #########################

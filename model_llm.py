@@ -30,7 +30,7 @@ import torch.nn.functional as F
 import faiss
 #模型下载
 
-model_dir = "/Users/xinyiwang/.cache/modelscope/hub/models/Qwen/Qwen3-0.6B"
+model_dir = "/extern2/zmy/.cache/modelscope/hub/models/Qwen/Qwen3-0.6B"
 
 tokenizer = AutoTokenizer.from_pretrained(model_dir)
 model = AutoModelForCausalLM.from_pretrained(model_dir)
