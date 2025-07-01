@@ -1,4 +1,3 @@
-faiss_gpu
 matplotlib
 networkx
 numpy
